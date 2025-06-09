@@ -1105,7 +1105,7 @@ function find_last%(str: string, re: pattern, start: count &default=0%) : string
 		{
 		int n = re->MatchPrefix(t, e - t);
 		if ( n >= 0 )
-			return zeek::make_intrusive<zeek::StringVal>(n, (const char*) t);
+			return zeek::make_intrusive<zeek::StringVal>(e - t, (const char*) t);
 		}
 
 	return zeek::val_mgr->EmptyString();
@@ -1135,7 +1135,7 @@ function find_first%(str: string, re: pattern, start: count &default=0%) : strin
 		{
 		int n = re->MatchPrefix(t, e - t);
 		if ( n >= 0 )
-			return zeek::make_intrusive<zeek::StringVal>(n, (const char*) t);
+			return zeek::make_intrusive<zeek::StringVal>(e - t, (const char*) t);
 		}
 
 	return zeek::val_mgr->EmptyString();
