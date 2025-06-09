@@ -1095,62 +1095,73 @@ function find_all_ordered%(str: string, re: pattern, max_str_size: int &default=
 ##
 ## .. zeek:see:: find_all find_all_ordered strstr find_first
 function find_last%(str: string, re: pattern, start: count &default=999999999%) : string
-	%{
-	const u_char* s = str->Bytes();
-	const u_char* e = s + str->Len();
-	zeek_uint_t str_len = str->Len();
+%{
+	const u_char* begin = str->Bytes();
+	const zeek_uint_t len = str->Len();
+
+	if ( len == 0 )
+		return zeek::val_mgr->EmptyString();
+
+	// Clamp start to valid range
+	zeek_uint_t effective_start = (start >= len) ? len - 1 : start;
+	const u_char* end = begin + len;
+
 	const u_char* last_match = nullptr;
+	ptrdiff_t last_len = 0;
 
-	// Clamp start to max length
-	if ( start >= str_len )
-		start = str_len - 1;
-
-	for ( const u_char* t = s; t < e; ++t )
+	for ( const u_char* ptr = begin; ptr < end; ++ptr )
 		{
-		int n = re->MatchPrefix(t, e - t);
-		if ( n >= 0 && zeek_uint_t(t - s) <= start )
-			last_match = t;
+		const auto offset = static_cast<zeek_uint_t>(ptr - begin);
+		if ( offset > effective_start )
+			break;
+
+		const auto remaining = static_cast<ptrdiff_t>(end - ptr);
+		const int match_len = re->MatchPrefix(ptr, remaining);
+
+		if ( match_len >= 0 )
+			{
+			last_match = ptr;
+			last_len = match_len;
+			}
 		}
 
 	if ( last_match )
-		return zeek::make_intrusive<zeek::StringVal>(e - last_match, (const char*) last_match);
+		return zeek::make_intrusive<zeek::StringVal>(last_len, reinterpret_cast<const char*>(last_match));
 
 	return zeek::val_mgr->EmptyString();
-	%}
+%}
 
-## Finds the first occurrence of a pattern in a string.
+## Finds the first occurrence of a pattern in a string, starting at an optional offset.
 ##
-## str: The string to inspect.
+## str: The string to search.
+## re:  The regular expression pattern to match.
+## start: Optional byte offset at which to begin the search.
 ##
-## re: The pattern to look for in *str*.
+## Returns: The matched substring starting at the first match, or the empty string if no match is found.
 ##
-## start: The offset where to begin searching (default: 0).
-##
-## Returns: The first string in *str* that matches *re* and starts at or after *start*, or the empty string.
-##
-## .. zeek:see:: find_all find_all_ordered find_last strstr
 function find_first%(str: string, re: pattern, start: count &default=0%) : string
-	%{
-	const u_char* s = str->Bytes();
-	const u_char* e = s + str->Len();
-	zeek_uint_t str_len = str->Len();
+%{
+	const u_char* begin = str->Bytes();
+	const zeek_uint_t len = str->Len();
 
-	if ( start >= str_len )
+	if ( start >= len )
 		return zeek::val_mgr->EmptyString();
 
-	for ( const u_char* t = s; t < e; ++t )
-		{
-		// Only consider matches starting at or after the start offset
-		if ( zeek_uint_t(t - s) < start )
-			continue;
+	const u_char* search_start = begin + start;
+	const u_char* end = begin + len;
 
-		int n = re->MatchPrefix(t, e - t);
-		if ( n >= 0 )
-			return zeek::make_intrusive<zeek::StringVal>(e - t, (const char*) t);
+	for ( const u_char* ptr = search_start; ptr < end; ++ptr )
+		{
+		const auto remaining = static_cast<ptrdiff_t>(end - ptr);
+		const int match_len = re->MatchPrefix(ptr, remaining);
+
+		if ( match_len >= 0 )
+			return zeek::make_intrusive<zeek::StringVal>(match_len, reinterpret_cast<const char*>(ptr));
 		}
 
 	return zeek::val_mgr->EmptyString();
-	%}
+%}
+
 
 ## Returns a hex dump for given input data. The hex dump renders 16 bytes per
 ## line, with hex on the left and ASCII (where printable)
