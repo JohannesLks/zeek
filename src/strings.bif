@@ -1096,8 +1096,9 @@ function find_last%(str: string, re: pattern, start: count &default=0%) : string
 	%{
 	const u_char* s = str->Bytes();
 	const u_char* e = s + str->Len();
+	zeek_uint_t str_len = str->Len();
 
-	if ( start >= str->Len() )
+	if ( start >= str_len )
 		return zeek::val_mgr->EmptyString();
 
 	for ( const u_char* t = e - 1; t >= s + start; --t )
@@ -1123,8 +1124,9 @@ function find_first%(str: string, re: pattern, start: count &default=0%) : strin
 	%{
 	const u_char* s = str->Bytes();
 	const u_char* e = s + str->Len();
+	zeek_uint_t str_len = str->Len();
 
-	if ( start >= str->Len() )
+	if ( start >= str_len )
 		return zeek::val_mgr->EmptyString();
 
 	s += start;
