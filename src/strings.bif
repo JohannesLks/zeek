@@ -1108,7 +1108,7 @@ function find_last%(str: string, re: pattern, start: count &default=999999999%) 
 	for ( const u_char* t = s; t < e; ++t )
 		{
 		int n = re->MatchPrefix(t, e - t);
-		if ( n >= 0 && (t - s) <= start )
+		if ( n >= 0 && zeek_uint_t(t - s) <= start )
 			last_match = t;
 		}
 
@@ -1141,7 +1141,7 @@ function find_first%(str: string, re: pattern, start: count &default=0%) : strin
 	for ( const u_char* t = s; t < e; ++t )
 		{
 		// Only consider matches starting at or after the start offset
-		if ( (t - s) < start )
+		if ( zeek_uint_t(t - s) < start )
 			continue;
 
 		int n = re->MatchPrefix(t, e - t);
