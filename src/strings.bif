@@ -1082,31 +1082,38 @@ function find_all_ordered%(str: string, re: pattern, max_str_size: int &default=
 
 ## Finds the last occurrence of a pattern in a string. This function returns
 ## the match that starts at the largest index in the string, which is not
-## necessarily the longest match.  For example, a pattern of ``/.*/`` will
+## necessarily the longest match. For example, a pattern of ``/.*/`` will
 ## return the final character in the string.
 ##
 ## str: The string to inspect.
 ##
 ## re: The pattern to look for in *str*.
 ##
+## start: Optional maximum offset. Only matches starting at or before this index are considered.
+##
 ## Returns: The last string in *str* that matches *re*, or the empty string.
 ##
-## .. zeek:see: find_all find_all_ordered strstr find_first
-function find_last%(str: string, re: pattern, start: count &default=0%) : string
+## .. zeek:see:: find_all find_all_ordered strstr find_first
+function find_last%(str: string, re: pattern, start: count &default=999999999%) : string
 	%{
 	const u_char* s = str->Bytes();
 	const u_char* e = s + str->Len();
 	zeek_uint_t str_len = str->Len();
+	const u_char* last_match = nullptr;
 
+	// Clamp start to max length
 	if ( start >= str_len )
-		return zeek::val_mgr->EmptyString();
+		start = str_len - 1;
 
-	for ( const u_char* t = e - 1; t >= s + start; --t )
+	for ( const u_char* t = s; t < e; ++t )
 		{
 		int n = re->MatchPrefix(t, e - t);
-		if ( n >= 0 )
-			return zeek::make_intrusive<zeek::StringVal>(e - t, (const char*) t);
+		if ( n >= 0 && (t - s) <= start )
+			last_match = t;
 		}
+
+	if ( last_match )
+		return zeek::make_intrusive<zeek::StringVal>(e - last_match, (const char*) last_match);
 
 	return zeek::val_mgr->EmptyString();
 	%}
@@ -1117,7 +1124,9 @@ function find_last%(str: string, re: pattern, start: count &default=0%) : string
 ##
 ## re: The pattern to look for in *str*.
 ##
-## Returns: The first string in *str* that matches *re*, or the empty string.
+## start: The offset where to begin searching (default: 0).
+##
+## Returns: The first string in *str* that matches *re* and starts at or after *start*, or the empty string.
 ##
 ## .. zeek:see:: find_all find_all_ordered find_last strstr
 function find_first%(str: string, re: pattern, start: count &default=0%) : string
@@ -1129,10 +1138,12 @@ function find_first%(str: string, re: pattern, start: count &default=0%) : strin
 	if ( start >= str_len )
 		return zeek::val_mgr->EmptyString();
 
-	s += start;
-
 	for ( const u_char* t = s; t < e; ++t )
 		{
+		// Only consider matches starting at or after the start offset
+		if ( (t - s) < start )
+			continue;
+
 		int n = re->MatchPrefix(t, e - t);
 		if ( n >= 0 )
 			return zeek::make_intrusive<zeek::StringVal>(e - t, (const char*) t);
